@@ -1,0 +1,34 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Align to upstream
+        run: |
+          set -eux
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/inventree/InvenTree.git || true
+          git fetch upstream master
+          git checkout master
+          mkdir -p /tmp/keep
+          cp .github/workflows/sync-upstream.yml /tmp/keep/sync-upstream.yml
+          git reset --hard upstream/master
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/keep/sync-upstream.yml .github/workflows/sync-upstream.yml
+          git add -A
+          git commit -m "chore: sync upstream $(date -u)" || echo "no changes"
+          git push origin master --force
